@@ -1,19 +1,20 @@
 # PCOSense: Multi-Agent System for Polycystic Ovary Syndrome Detection
 
-> AI-powered screening tool for Polycystic Ovary Syndrome (PCOS) using a multi-agent architecture, local LLM, and explainable ML.
+> AI-powered PCOS screening tool using a multi-agent architecture, local LLM, and explainable ML.
 
 ---
 
 ## Overview
 
-PCOSense is a full-stack clinical decision-support application that helps identify early PCOS risk from patient biomarkers. It combines:
+PCOSense is a full-stack clinical decision-support application that estimates PCOS risk from patient biomarkers. It combines:
 
 - **XGBoost ML model** trained on 541 labeled patient records — **AUROC 0.9528**
 - **SHAP explainability** — shows which biomarkers drive each individual prediction
 - **Multi-agent AI system** — 3 specialised agents orchestrated sequentially
 - **RAG knowledge base** — 27 clinical papers in ChromaDB for evidence retrieval
-- **Ollama + Llama 3.2** (local LLM via Ollama) — zero API cost, runs entirely on your machine
+- **Ollama + Llama 3.2** — local LLM, zero API cost, runs entirely on your machine
 - **PubMed API + NHANES data** — latest research and population-level context
+- **Quality Control system** — per-assessment validation scores surfaced in the UI
 - **Supabase** — patient session storage, predictions, and audit trail
 
 ---
@@ -22,8 +23,8 @@ PCOSense is a full-stack clinical decision-support application that helps identi
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Python Shiny (Phase 3) |
-| Backend | FastAPI + Uvicorn (Phase 3) |
+| Frontend | Python Shiny |
+| Backend | FastAPI + Uvicorn |
 | ML Model | XGBoost + SHAP |
 | LLM | Ollama · Llama 3.2 (local) |
 | Vector DB | ChromaDB (RAG — 27 clinical papers) |
@@ -39,7 +40,7 @@ PCOSense is a full-stack clinical decision-support application that helps identi
 flowchart LR
     DATA[("PCOS Dataset\n541 patients")]:::data
 
-    subgraph TRAIN["Phase 1 · ML Pipeline ✅"]
+    subgraph TRAIN["Phase 1 · ML Pipeline"]
         direction LR
         EDA["EDA\nNotebook 01"]:::nb
         FEAT["Feature Eng.\nNotebook 02"]:::nb
@@ -47,7 +48,7 @@ flowchart LR
         WRAP["ML Wrapper\n+ SHAP"]:::nb
     end
 
-    subgraph AGENTS["Phase 2 · Multi-Agent System ✅"]
+    subgraph AGENTS["Phase 2 · Multi-Agent System"]
         direction TB
         A1["Agent 1\nData Validator"]:::agent
         A2["Agent 2\nEvidence Retriever"]:::agent
@@ -62,9 +63,10 @@ flowchart LR
         PUB["PubMed API"]:::api
         NHS["NHANES Data"]:::api
         DB["Supabase\nPostgreSQL"]:::db
+        QC["Quality Control\nper-assessment scores"]:::qc
     end
 
-    UI["Shiny UI\nPhase 3 ✅"]:::ui
+    UI["Shiny UI\nPhase 3"]:::ui
 
     DATA --> EDA --> FEAT --> MODEL --> WRAP
     WRAP --> A1
@@ -73,6 +75,8 @@ flowchart LR
     A2 --> PUB
     A3 --> NHS
     A3 --> DB
+    A3 --> QC
+    QC --> UI
     A3 --> UI
 
     classDef data  fill:#4C78A8,stroke:#2c5282,color:#fff
@@ -83,7 +87,8 @@ flowchart LR
     classDef rag   fill:#68b0ab,stroke:#4a908a,color:#fff
     classDef api   fill:#667eea,stroke:#434190,color:#fff
     classDef db    fill:#fc8181,stroke:#c53030,color:#fff
-    classDef ui    fill:#fc8181,stroke:#c53030,color:#fff
+    classDef ui    fill:#7C5CBF,stroke:#5E3EA1,color:#fff
+    classDef qc    fill:#6BAE9A,stroke:#4D9180,color:#fff
 ```
 
 > See [`docs/multi_agent_architecture.md`](docs/multi_agent_architecture.md) for detailed Mermaid diagrams of the agent workflow, tool calling map, and RAG pipeline.
@@ -116,6 +121,9 @@ Agent 3: Risk Assessor
     ├─ Tool 3: NHANES data (population percentiles)
     ├─ Tool 4: Ollama Llama 3.2 (synthesise recommendation)
     └─ Output: {risk_score, top_factors[], recommendation}
+    │
+    ▼
+Quality Control (per-assessment scores surfaced in UI)
     │
     ▼
 Supabase (persist results + audit trail)
@@ -151,36 +159,36 @@ Supabase (persist results + audit trail)
 ```
 PCOSense/
 ├── notebooks/
-│   ├── 01_eda.ipynb                  ✅ EDA — distributions, correlations
-│   ├── 02_features.ipynb             ✅ Feature engineering — 42 features
-│   ├── 03_xgboost_training.ipynb     ✅ Training — AUROC 0.9528
-│   └── 04_rag_setup.ipynb            ✅ ChromaDB knowledge base (27 papers)
+│   ├── 01_eda.ipynb                  EDA — distributions, correlations
+│   ├── 02_features.ipynb             Feature engineering — 42 features
+│   ├── 03_xgboost_training.ipynb     Training — AUROC 0.9528
+│   └── 04_rag_setup.ipynb            ChromaDB knowledge base (27 papers)
 ├── src/
-│   ├── __init__.py
-│   ├── ml_model.py                   ✅ XGBoost prediction + SHAP explainer
-│   ├── ollama_client.py              ✅ Ollama LLM wrapper (generate + embed)
-│   ├── rag_system.py                 ✅ Chroma retrieval + Ollama synthesis
-│   ├── agents.py                     ✅ 3 agents + orchestrator
-│   ├── data_fetcher.py               ✅ PubMed API + NHANES baselines
-│   ├── database.py                   ✅ Supabase client (patients, predictions, audit)
-│   ├── api/                          ✅ FastAPI (Phase 3)
-│   │   ├── main.py                   ✅ /api/v1/assess, health, feature-info
-│   │   └── schemas.py                ✅ Form JSON → model feature keys
-│   └── app/                          ✅ Shiny UI (Phase 3)
-│       └── app.py                    ✅ Teal-themed form + results
+│   ├── agents.py                     3 agents + orchestrator
+│   ├── ml_model.py                   XGBoost prediction + SHAP explainer
+│   ├── ollama_client.py              Ollama LLM wrapper (generate + embed)
+│   ├── rag_system.py                 Chroma retrieval + Ollama synthesis
+│   ├── data_fetcher.py               PubMed API + NHANES baselines
+│   ├── database.py                   Supabase client (patients, predictions, audit)
+│   ├── quality_control.py            Per-assessment QC scores + validation flags
+│   ├── api/
+│   │   ├── main.py                   FastAPI — /assess, /health, /feature-info, /quality-summary
+│   │   └── schemas.py                Request validation + field mapping
+│   └── app/
+│       └── app.py                    Shiny frontend — form + results dashboard
 ├── models/
-│   ├── pcos_model.json               ✅ Trained XGBoost model
-│   └── model_metadata.json           ✅ AUROC, features, SHAP rankings
+│   ├── pcos_model.json               Trained XGBoost model
+│   └── model_metadata.json           AUROC, features, SHAP rankings
 ├── data/
-│   ├── raw/                          ✅ PCOS_data_without_infertility.xlsx
+│   ├── raw/                          PCOS_data_without_infertility.xlsx
 │   └── processed/
-│       ├── features_processed.pkl    ✅ Train/test splits + scaler + imputer
-│       └── eda_meta.json             ✅ EDA summary metadata
+│       ├── features_processed.pkl    Train/test splits + scaler + imputer
+│       └── eda_meta.json             EDA summary metadata
 ├── knowledge_base/
-│   └── chroma_db/                    ✅ ChromaDB vector database
+│   └── chroma_db/                    ChromaDB vector database
 ├── docs/
-│   └── multi_agent_architecture.md   ✅ Mermaid agent workflow diagrams
-├── .env.example                      ✅ Environment variable template
+│   └── multi_agent_architecture.md   Mermaid agent workflow diagrams
+├── .env.example                      Environment variable template
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -194,13 +202,13 @@ PCOSense/
 
 - Python 3.12
 - [Ollama](https://ollama.ai/download) installed and running
-- [Supabase](https://supabase.com) project (free tier)
-- [Kaggle API token](https://www.kaggle.com/settings) (for initial data download only)
+- [Supabase](https://supabase.com) project (free tier) — optional, pipeline runs without it
+- [Kaggle API token](https://www.kaggle.com/settings) — only needed if you want to retrain the model
 
 ### 1 — Clone & set up environment
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Kadambari-mirashi/PCOSense.git
 cd PCOSense
 
 python3.12 -m venv .venv
@@ -222,12 +230,13 @@ ollama pull nomic-embed-text
 
 ```bash
 cp .env.example .env
-# Edit .env with your Supabase URL and key
+# Edit .env — set SUPABASE_URL and SUPABASE_KEY if using persistence
+# CORS_ORIGINS defaults to localhost:3838; set it for any other deployment
 ```
 
-### 4 — Set up Supabase tables
+### 4 — Set up Supabase tables (skip if not using persistence)
 
-Run the following SQL in [Supabase SQL Editor](https://supabase.com/dashboard):
+Run this SQL in your [Supabase SQL Editor](https://supabase.com/dashboard):
 
 ```sql
 CREATE TABLE IF NOT EXISTS patients (
@@ -265,79 +274,72 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 ```
 
-### 5 — Configure Kaggle & train the model (if needed)
-
-```bash
-mkdir -p ~/.kaggle
-echo '{"username":"YOUR_USERNAME","key":"YOUR_KEY"}' > ~/.kaggle/kaggle.json
-chmod 600 ~/.kaggle/kaggle.json
-```
-
-Run notebooks 01–03 in order (the trained model is committed to the repo — this step is only needed if you want to retrain).
-
-### 6 — Build the knowledge base
+### 5 — Build the knowledge base
 
 ```bash
 jupyter notebook notebooks/04_rag_setup.ipynb
-# Run all cells → creates knowledge_base/chroma_db/
+# Run all cells — creates knowledge_base/chroma_db/
 ```
 
-### 7 — Verify everything works
+The trained model (`models/pcos_model.json`) is already committed. Run notebooks 01–03 only if you want to retrain from scratch.
+
+### 6 — Verify everything works
 
 ```bash
-# Test ML model
-python src/ml_model.py
-
-# Test Ollama client
-python src/ollama_client.py
-
-# Test data fetchers (PubMed + NHANES)
-python src/data_fetcher.py
-
-# Test full multi-agent pipeline
-python src/agents.py
+python src/ml_model.py       # Test ML model
+python src/ollama_client.py  # Test Ollama connection
+python src/agents.py         # Test full multi-agent pipeline
 ```
 
-### 8 — Run the API (FastAPI)
-
-From the project root (with your virtual environment activated):
+### 7 — Run the API
 
 ```bash
 uvicorn src.api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-- Health: [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
-- OpenAPI docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- Assess (example): `POST /api/v1/assess` with JSON body using keys such as `age`, `bmi`, `cycle_ri` (1=regular, 2=irregular), `lh`, `fsh`, `tsh`, `hair_growth`, `skin_darkening`, `pimples`, `weight_gain`, `follicle_l`, `follicle_r`, `cycle_length_days`. You can also send native model column names (e.g. `" Age (yrs)"`) as extra keys.
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/health` | Service status |
+| `POST /api/v1/assess` | Run full assessment pipeline |
+| `GET /api/v1/feature-info` | Model metadata |
+| `GET /api/v1/quality-summary` | Aggregate QC metrics across all assessments |
+| `GET /docs` | OpenAPI interactive docs |
 
-If `SUPABASE_URL` and `SUPABASE_KEY` are set in `.env`, completed assessments are written to Supabase automatically (same behaviour as `PCOSOrchestrator(db=SupabaseClient())`).
+**Assessment request keys:** `age`, `bmi`, `cycle_ri` (1=regular, 2=irregular), `lh`, `fsh`, `tsh`, `hair_growth`, `skin_darkening`, `pimples`, `weight_gain`, `follicle_l`, `follicle_r`, `cycle_length_days`
 
-### 9 — Run the Shiny frontend
+### 8 — Run the Shiny frontend
 
-In a **second** terminal (API must be running unless you change `PCOSENSE_API_URL`):
+In a second terminal (API must already be running):
 
 ```bash
 shiny run src/app/app.py --reload --host 127.0.0.1 --port 3838
 ```
 
-Then open [http://127.0.0.1:3838](http://127.0.0.1:3838). Set `PCOSENSE_API_URL` in `.env` if the API is not on port 8000.
+Open [http://127.0.0.1:3838](http://127.0.0.1:3838).
 
 ---
 
-## Development Phases
+## Quality Control
 
-- [x] **Phase 1** — XGBoost ML model (AUROC 0.9528) + SHAP explainability
-- [x] **Phase 2** — Multi-agent system + RAG (ChromaDB) + Ollama + PubMed/NHANES + Supabase
-- [x] **Phase 3** — Python Shiny frontend + FastAPI backend + local deployment (API + UI)
+Each assessment generates a `QCMetrics` report with four components:
+
+| Component | Weight | What it measures |
+|-----------|--------|-----------------|
+| Input validation | 20% | Completeness and plausibility of patient data |
+| Model confidence | 50% | XGBoost prediction strength |
+| Plausibility | 20% | Joint model confidence × input quality |
+| RAG evidence | 10% | Quality of retrieved clinical literature |
+
+The overall score and individual checks are displayed in the results dashboard. The `/api/v1/quality-summary` endpoint exposes aggregate metrics across all sessions.
 
 ---
 
 ## Important Notes
 
-- `kaggle.json` is **never committed** — only needed locally to download the raw data
-- `.env` is **never committed** — contains Supabase credentials
-- `models/pcos_model.json` is committed — the app loads this at runtime, no retraining needed
-- All LLM inference runs locally via Ollama — **zero API costs**
-- PubMed and NHANES APIs are public and free (no authentication required)
-- The knowledge base contains 27 curated clinical papers on PCOS diagnosis
-- The app is designed to run fully offline after initial setup (except PubMed queries)
+- `.env` is never committed — contains Supabase credentials
+- `kaggle.json` is never committed — only needed to download raw training data
+- `models/pcos_model.json` is committed — no retraining needed to run the app
+- All LLM inference runs locally via Ollama — zero API costs
+- PubMed and NHANES APIs are public and require no authentication
+- The app runs fully offline after initial setup, except for live PubMed queries
+- For non-localhost deployments, set `CORS_ORIGINS` in `.env` to your frontend URL
