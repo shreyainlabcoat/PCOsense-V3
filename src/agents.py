@@ -295,14 +295,14 @@ class ClinicalEvidenceRetriever:
         # ── Tool 1: Chroma local papers ─────────────────────────────────
         local_papers: list[dict] = []
         try:
-            local_papers = self.rag.retrieve_papers(query, n_results=3)
+            local_papers = self.rag.retrieve_papers(query, n_results=2)
         except Exception as exc:
             log.warning("Chroma retrieval failed: %s", exc)
 
         # ── Tool 2: PubMed API ──────────────────────────────────────────
         pubmed_papers: list[dict] = []
         try:
-            pubmed_papers = fetch_pubmed_papers(query, max_papers=3)
+            pubmed_papers = fetch_pubmed_papers(query, max_papers=2)
         except Exception as exc:
             log.warning("PubMed fetch failed: %s", exc)
 
@@ -316,11 +316,11 @@ class ClinicalEvidenceRetriever:
             log.info("Evidence sparse; retrying with broader query: %s", fallback_query)
             query = fallback_query
             try:
-                local_papers = self.rag.retrieve_papers(query, n_results=3)
+                local_papers = self.rag.retrieve_papers(query, n_results=2)
             except Exception as exc:
                 log.warning("Chroma retry failed: %s", exc)
             try:
-                pubmed_papers = fetch_pubmed_papers(query, max_papers=3)
+                pubmed_papers = fetch_pubmed_papers(query, max_papers=2)
             except Exception as exc:
                 log.warning("PubMed retry failed: %s", exc)
 

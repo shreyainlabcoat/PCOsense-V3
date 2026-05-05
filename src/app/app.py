@@ -7,25 +7,26 @@ Long API calls use shiny.extended_task so the Shiny server event loop is not blo
 
 from __future__ import annotations
 
-import json
+import asyncio
 import os
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
-import httpx
 from dotenv import load_dotenv
 from shiny import App, reactive, render, ui
 from shiny.reactive import extended_task
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
-load_dotenv(_ROOT / ".env")
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-_default_port = os.getenv("PORT", "8000")
-API_BASE = os.getenv("PCOSENSE_API_URL", f"http://127.0.0.1:{_default_port}").rstrip("/")
-ASSESS_URL = f"{API_BASE}/api/v1/assess"
-HEALTH_URL = f"{API_BASE}/api/v1/health"
+load_dotenv(_ROOT / ".env")
+from src.agents import PCOSOrchestrator
+from src.database import SupabaseClient
+from src.quality_control import QualityController
 
 _UI_BUILD_STAMP = "2026-04-12 • header-layout-v15"  # internal only, never rendered
 
@@ -307,6 +308,32 @@ body {
   line-height: 1.45;
 }
 
+.pcos-info-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+.pcos-info-card {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 0.8rem;
+  box-shadow: var(--shadow-sm);
+  padding: 0.78rem 0.84rem;
+}
+.pcos-info-title {
+  margin: 0 0 0.35rem 0;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.pcos-info-body {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 /* ── Header ──────────────────────────────────────────────────── */
 .pcos-header-main {
   background: linear-gradient(140deg, #ffffff 0%, #fcf7ff 100%);
@@ -400,6 +427,7 @@ body {
 @media (max-width: 900px) {
   .pcos-hero { grid-template-columns: 1fr; }
   .pcos-support-grid { grid-template-columns: 1fr; }
+  .pcos-info-sections { grid-template-columns: 1fr; }
   .pcos-nav-links { display: none; }
 }
 
@@ -1630,9 +1658,9 @@ app_ui = ui.page_sidebar(
                 class_="pcos-logo",
             ),
             ui.div(
-                ui.tags.a("How it works", href="#", class_="pcos-nav-link"),
-                ui.tags.a("Science", href="#", class_="pcos-nav-link"),
-                ui.tags.a("Resources", href="#", class_="pcos-nav-link"),
+                ui.tags.a("How it works", href="#how-it-works", class_="pcos-nav-link"),
+                ui.tags.a("Science", href="#science", class_="pcos-nav-link"),
+                ui.tags.a("Resources", href="#resources", class_="pcos-nav-link"),
                 class_="pcos-nav-links",
             ),
             ui.div(
@@ -1708,6 +1736,36 @@ app_ui = ui.page_sidebar(
             class_="pcos-support-grid",
         ),
         ui.div(
+            ui.div(
+                ui.p("How it works", class_="pcos-info-title"),
+                ui.p(
+                    "You enter symptom and cycle inputs, then a three-agent pipeline validates data, retrieves clinical evidence, and computes an explainable risk score.",
+                    class_="pcos-info-body",
+                ),
+                class_="pcos-info-card",
+                id="how-it-works",
+            ),
+            ui.div(
+                ui.p("Science", class_="pcos-info-title"),
+                ui.p(
+                    "Risk is produced by an XGBoost model with SHAP factor explanations, combined with evidence retrieval and quality-control scoring.",
+                    class_="pcos-info-body",
+                ),
+                class_="pcos-info-card",
+                id="science",
+            ),
+            ui.div(
+                ui.p("Resources", class_="pcos-info-title"),
+                ui.p(
+                    "Use this as a screening aid only. If symptoms persist, discuss labs and diagnostic criteria with a qualified clinician.",
+                    class_="pcos-info-body",
+                ),
+                class_="pcos-info-card",
+                id="resources",
+            ),
+            class_="pcos-info-sections",
+        ),
+        ui.div(
             ui.h1("PCOSense", class_="pcos-header-title"),
             ui.p(
                 "AI-powered PCOS screening \u2014 fill in what you know, get a personalized risk report backed by clinical evidence.",
@@ -1729,17 +1787,20 @@ app_ui = ui.page_sidebar(
 
 def server(input: Any, output: Any, session: Any) -> None:
     form_error = reactive.Value(None)
+    runtime_error: str | None = None
+    orchestrator: PCOSOrchestrator | None = None
+    qc: QualityController | None = None
+
+    try:
+        db = SupabaseClient()
+        orchestrator = PCOSOrchestrator(db=db if db.is_configured() else None)
+        qc = QualityController()
+    except Exception as exc:
+        runtime_error = str(exc)
 
     @reactive.poll(lambda: int(time.time() // 60), interval_secs=60)
     def api_health_ok() -> bool:
-        if os.getenv("RENDER"):
-            return True
-        try:
-            with httpx.Client(timeout=4.0) as client:
-                client.get(HEALTH_URL).raise_for_status()
-            return True
-        except Exception:
-            return False
+        return runtime_error is None
 
     @render.ui
     def bmi_panel() -> ui.Tag:
@@ -1791,27 +1852,20 @@ def server(input: Any, output: Any, session: Any) -> None:
 
     @extended_task
     async def run_assess(payload: dict[str, Any]) -> dict[str, Any]:
-        timeout = httpx.Timeout(600.0, connect=30.0)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.post(ASSESS_URL, json=payload)
-            try:
-                r.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                detail = exc.response.text
-                try:
-                    body = exc.response.json()
-                    d = body.get("detail", detail)
-                    if isinstance(d, list):
-                        detail = "; ".join(str(x) for x in d)
-                    else:
-                        detail = str(d)
-                except (json.JSONDecodeError, ValueError, TypeError):
-                    pass
-                raise RuntimeError(f"API {exc.response.status_code}: {detail}") from exc
-            try:
-                return r.json()
-            except json.JSONDecodeError as exc:
-                raise RuntimeError("API returned non-JSON response") from exc
+        if runtime_error:
+            raise RuntimeError(f"Runtime initialization failed: {runtime_error}")
+        if orchestrator is None or qc is None:
+            raise RuntimeError("Pipeline is unavailable.")
+
+        result = await asyncio.to_thread(orchestrator.run, payload)
+        qc_metrics = qc.create_metrics_report(
+            patient_data=payload,
+            prediction_result=result.get("assessment", {}),
+            rag_results=result.get("evidence", {}),
+            validation_flags_from_agent=(result.get("validation", {}) or {}).get("flags", []),
+        )
+        result["quality_control"] = qc_metrics.to_dict()
+        return result
 
     @reactive.effect
     @reactive.event(input.submit)
@@ -1841,7 +1895,7 @@ def server(input: Any, output: Any, session: Any) -> None:
         return ui.div(
             ui.span(class_="pcos-api-dot pcos-api-dot--err"),
             ui.span(
-                "Assessment service offline — results unavailable. Contact support if this persists.",
+                "Assessment pipeline unavailable — check environment variables and model dependencies.",
                 class_="small text-danger",
             ),
             class_="pcos-api-banner d-flex align-items-center",
