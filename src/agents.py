@@ -275,11 +275,21 @@ class ClinicalEvidenceRetriever:
         top_parts = parts[: self._MAX_QUERY_TERMS]
         return "PCOS " + " ".join(top_parts)
 
+    def _fallback_query(self, validated_data: dict[str, Any]) -> str:
+        """Broader query used when initial evidence retrieval is sparse."""
+        parts = ["PCOS Rotterdam criteria"]
+        if validated_data.get("Cycle(R/I)") and int(validated_data["Cycle(R/I)"]) != 1:
+            parts.append("irregular cycles")
+        if validated_data.get("BMI") and float(validated_data["BMI"]) > 25:
+            parts.append("overweight")
+        return " ".join(parts)
+
     def run(self, validated_data: dict[str, Any]) -> dict[str, Any]:
         """Retrieve and synthesise clinical evidence for the patient."""
         start = time.time()
 
         query = self._build_query(validated_data)
+        loop_attempts: list[dict[str, Any]] = [{"attempt": 1, "query": query, "strategy": "symptom-specific"}]
         log.info("Evidence query: %s", query)
 
         # ── Tool 1: Chroma local papers ─────────────────────────────────
@@ -295,6 +305,24 @@ class ClinicalEvidenceRetriever:
             pubmed_papers = fetch_pubmed_papers(query, max_papers=3)
         except Exception as exc:
             log.warning("PubMed fetch failed: %s", exc)
+
+        # ── Agentic loop: broaden query once if evidence is sparse ──────
+        sparse = (len(local_papers) + len(pubmed_papers)) == 0
+        if sparse:
+            fallback_query = self._fallback_query(validated_data)
+            loop_attempts.append(
+                {"attempt": 2, "query": fallback_query, "strategy": "broadened-fallback"}
+            )
+            log.info("Evidence sparse; retrying with broader query: %s", fallback_query)
+            query = fallback_query
+            try:
+                local_papers = self.rag.retrieve_papers(query, n_results=3)
+            except Exception as exc:
+                log.warning("Chroma retry failed: %s", exc)
+            try:
+                pubmed_papers = fetch_pubmed_papers(query, max_papers=3)
+            except Exception as exc:
+                log.warning("PubMed retry failed: %s", exc)
 
         # ── Tool 3 & 4: Ollama synthesis ────────────────────────────────
         all_evidence = ""
@@ -348,6 +376,11 @@ class ClinicalEvidenceRetriever:
             "diagnostic_criteria": _ensure_str_list(clinical_analysis.get("diagnostic_criteria_met")),
             "key_findings": _ensure_str_list(clinical_analysis.get("key_findings")),
             "red_flags": _ensure_str_list(clinical_analysis.get("red_flags")),
+            "agentic_loop": {
+                "attempts": loop_attempts,
+                "used_fallback_query": len(loop_attempts) > 1,
+                "total_sources_found": len(local_papers) + len(pubmed_papers),
+            },
             "elapsed_sec": round(elapsed, 2),
         }
 

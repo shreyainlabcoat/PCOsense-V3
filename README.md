@@ -343,3 +343,18 @@ The overall score and individual checks are displayed in the results dashboard. 
 - PubMed and NHANES APIs are public and require no authentication
 - The app runs fully offline after initial setup, except for live PubMed queries
 - For non-localhost deployments, set `CORS_ORIGINS` in `.env` to your frontend URL
+
+---
+
+## Production Readiness
+
+For App V3 finalization artifacts:
+
+- Production checklist/report: `docs/production_readiness_report.md`
+- Live demo presentation script: `docs/presentation_demo_script.md`
+
+Operational endpoints:
+
+- `GET /api/v1/health` - service status
+- `GET /api/v1/readiness` - deployment readiness checks
+- `GET /api/v1/quality-summary` - aggregate quality metrics

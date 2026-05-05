@@ -33,40 +33,288 @@ APP_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --primary:      #7C5CBF;
-  --primary-lt:   #A589D8;
-  --primary-dk:   #5E3EA1;
-  --primary-bg:   #F7F3FF;
-  --rose:         #E8A4B0;
-  --rose-dk:      #C97C84;
-  --sage:         #6BAE9A;
-  --sage-dk:      #4D9180;
+  --primary:      #2FA36B;
+  --primary-lt:   #52b982;
+  --primary-dk:   #1f7f53;
+  --primary-bg:   #edf6e8;
+  --rose:         #f1d2c4;
+  --rose-dk:      #cf9e8b;
+  --sage:         #84b89c;
+  --sage-dk:      #4f7f68;
   --surface:      #FFFFFF;
-  --bg:           #FAFAF8;
-  --border:       #EDE8F8;
-  --text:         #1A1A2E;
-  --text-muted:   #64748B;
-  --text-light:   #94A3B8;
-  --shadow-sm:    0 1px 3px rgba(124,92,191,0.08);
-  --shadow-md:    0 4px 14px rgba(124,92,191,0.12);
+  --bg:           #eef6ea;
+  --border:       #dbe8d7;
+  --text:         #1E2F2A;
+  --text-muted:   #4A4A4A;
+  --text-light:   #6f7f79;
+  --shadow-sm:    0 2px 8px rgba(30, 47, 42, 0.08);
+  --shadow-md:    0 10px 26px rgba(30, 47, 42, 0.12);
   --radius:       0.65rem;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 body {
-  background: var(--bg) !important;
+  background: linear-gradient(180deg, #edf6e8 0%, #f6f8f2 45%, #fdfcf8 100%) !important;
   font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
   color: var(--text);
 }
 
+.pcos-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.pcos-nav {
+  margin: 0 auto 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-sm);
+  padding: 0.55rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+.pcos-logo {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  font-size: 0.94rem;
+}
+.pcos-logo-mark {
+  display: inline-flex;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #d7efdd, #b9e4c7);
+  color: #255640;
+  margin-right: 0.35rem;
+  font-size: 0.78rem;
+}
+.pcos-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.pcos-nav-link { color: inherit; text-decoration: none; font-weight: 500; }
+.pcos-nav-actions { display: flex; gap: 0.45rem; }
+.pcos-nav-ico {
+  width: 1.95rem;
+  height: 1.95rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pcos-hero {
+  margin-bottom: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-md);
+  background: linear-gradient(120deg, #f5faef 0%, #f7f6f1 55%, #fffaf4 100%);
+  padding: 1.2rem;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 1rem;
+}
+.pcos-hero-title {
+  margin: 0 0 0.55rem 0;
+  color: var(--text);
+  font-size: clamp(1.55rem, 3vw, 2.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  max-width: 20ch;
+}
+.pcos-hero-subtext {
+  margin: 0 0 0.85rem 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  max-width: 46ch;
+}
+.pcos-chip-row { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.9rem; }
+.pcos-chip {
+  display: inline-block;
+  padding: 0.26rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid #d5e6d7;
+  background: #f7fbf4;
+  color: #2a5e48;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+.pcos-chip--soft {
+  border-color: #eadfd5;
+  background: #fff7f1;
+  color: #8a5d43;
+}
+.pcos-hero-cta {
+  background: var(--primary) !important;
+  border: 1px solid var(--primary-dk) !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  padding: 0.64rem 1rem !important;
+  box-shadow: 0 8px 22px rgba(47,163,107,0.25);
+  width: auto !important;
+  min-width: 10rem;
+}
+
+.pcos-hero-visual {
+  border-radius: 0.9rem;
+  border: 1px solid #e7ece3;
+  background: linear-gradient(155deg, #edf7e8, #fbf7ef);
+  padding: 0.75rem;
+  position: relative;
+  min-height: 250px;
+  overflow: hidden;
+}
+.pcos-floral-shadow {
+  position: absolute;
+  right: -8px;
+  top: -6px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(194,226,198,0.85) 0%, rgba(194,226,198,0.2) 45%, transparent 70%);
+}
+.pcos-device {
+  width: 58%;
+  min-width: 180px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #dbe7d8;
+  border-radius: 1.1rem;
+  box-shadow: 0 14px 28px rgba(30, 47, 42, 0.14);
+  padding: 0.6rem 0.55rem;
+  position: relative;
+  z-index: 2;
+}
+.pcos-device-notch {
+  width: 32%;
+  height: 7px;
+  border-radius: 999px;
+  margin: 0 auto 0.55rem;
+  background: #dce7d6;
+}
+.pcos-graph {
+  height: 74px;
+  border-radius: 0.65rem;
+  border: 1px solid #e6eee3;
+  background:
+    linear-gradient(180deg, rgba(47,163,107,0.12), rgba(47,163,107,0.02)),
+    repeating-linear-gradient(0deg, #f9fcf7, #f9fcf7 15px, #eef4eb 15px, #eef4eb 16px);
+  position: relative;
+  overflow: hidden;
+}
+.pcos-graph-line {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 48%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #84bf96 0%, #3ea773 45%, #2f8f65 100%);
+  transform: rotate(-7deg);
+}
+.pcos-graph-line2 {
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  top: 60%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d6b79d 0%, #c9a78a 100%);
+  transform: rotate(6deg);
+}
+.pcos-insight-card {
+  margin-top: 0.5rem;
+  border-radius: 0.6rem;
+  border: 1px solid #e6ece2;
+  background: #f9fcf7;
+  padding: 0.45rem 0.5rem;
+}
+.pcos-insight-title {
+  margin: 0 0 0.16rem 0;
+  font-size: 0.68rem;
+  color: #2d5e49;
+  font-weight: 700;
+}
+.pcos-insight-sub {
+  margin: 0;
+  font-size: 0.64rem;
+  color: #61736b;
+  line-height: 1.35;
+}
+.pcos-float-shot {
+  position: absolute;
+  border-radius: 0.6rem;
+  border: 1px solid #e3eadf;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(30,47,42,0.12);
+  padding: 0.35rem 0.45rem;
+  font-size: 0.62rem;
+  z-index: 3;
+}
+.pcos-float-shot--a { left: 7%; top: 18%; }
+.pcos-float-shot--b { right: 7%; bottom: 12%; }
+
+.pcos-support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+.pcos-support-card {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 0.8rem;
+  box-shadow: var(--shadow-sm);
+  padding: 0.78rem 0.84rem;
+}
+.pcos-support-kicker {
+  margin: 0 0 0.28rem 0;
+  color: #2f7155;
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+.pcos-support-title {
+  margin: 0 0 0.2rem 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.pcos-support-copy {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 /* ── Header ──────────────────────────────────────────────────── */
 .pcos-header-main {
-  background: var(--surface);
-  border-left: 4px solid var(--primary);
-  border-radius: var(--radius);
+  background: linear-gradient(140deg, #ffffff 0%, #fcf7ff 100%);
+  border: 1px solid #e9def8;
+  border-radius: 1rem;
   padding: 1.6rem 1.75rem;
   margin-bottom: 1.25rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 24px rgba(125, 92, 191, 0.12);
   max-width: 920px;
   margin-left: auto;
   margin-right: auto;
@@ -98,7 +346,7 @@ body {
 /* ── Cards ───────────────────────────────────────────────────── */
 .pcos-card {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0.9rem;
   padding: 1.15rem 1.3rem;
   margin-bottom: 1rem;
   background: var(--surface);
@@ -112,7 +360,7 @@ body {
 }
 .pcos-card--light-panel {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0.9rem;
   padding: 1.1rem 1.2rem;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
@@ -139,10 +387,20 @@ body {
   border-color: var(--primary-dk) !important;
   font-weight: 600 !important;
   letter-spacing: 0.01em;
+  border-radius: 999px !important;
+  padding-top: 0.62rem !important;
+  padding-bottom: 0.62rem !important;
+  box-shadow: 0 8px 20px rgba(47,163,107,0.22);
 }
 .btn-primary:hover {
   background-color: var(--primary-dk) !important;
-  border-color: #4a2f8a !important;
+  border-color: #195f3f !important;
+}
+
+@media (max-width: 900px) {
+  .pcos-hero { grid-template-columns: 1fr; }
+  .pcos-support-grid { grid-template-columns: 1fr; }
+  .pcos-nav-links { display: none; }
 }
 
 .form-label { font-weight: 500; font-size: 0.88rem; }
@@ -1366,6 +1624,90 @@ app_ui = ui.page_sidebar(
     ui.output_ui("api_status_banner"),
     ui.div(
         ui.div(
+            ui.div(
+                ui.span("◌", class_="pcos-logo-mark"),
+                "PCOSense",
+                class_="pcos-logo",
+            ),
+            ui.div(
+                ui.tags.a("How it works", href="#", class_="pcos-nav-link"),
+                ui.tags.a("Science", href="#", class_="pcos-nav-link"),
+                ui.tags.a("Resources", href="#", class_="pcos-nav-link"),
+                class_="pcos-nav-links",
+            ),
+            ui.div(
+                ui.span("☺", class_="pcos-nav-ico"),
+                ui.span("○", class_="pcos-nav-ico"),
+                class_="pcos-nav-actions",
+            ),
+            class_="pcos-nav",
+        ),
+        ui.div(
+            ui.div(
+                ui.div(
+                    ui.span("Science-backed", class_="pcos-chip"),
+                    ui.span("Calm guidance", class_="pcos-chip pcos-chip--soft"),
+                    ui.span("Hormone clarity", class_="pcos-chip"),
+                    class_="pcos-chip-row",
+                ),
+                ui.h2(
+                    "See the patterns.\nUnderstand your hormones.",
+                    class_="pcos-hero-title",
+                ),
+                ui.p(
+                    "A modern hormone-tracking experience that turns cycle signals into clear, supportive insights so you can take the next step with confidence.",
+                    class_="pcos-hero-subtext",
+                ),
+                ui.input_action_button(
+                    "hero_cta",
+                    "Track with confidence",
+                    class_="pcos-hero-cta",
+                ),
+            ),
+            ui.div(
+                ui.div(class_="pcos-floral-shadow"),
+                ui.div(
+                    ui.div(class_="pcos-device-notch"),
+                    ui.div(
+                        ui.div(class_="pcos-graph-line"),
+                        ui.div(class_="pcos-graph-line2"),
+                        class_="pcos-graph",
+                    ),
+                    ui.div(
+                        ui.p("Insight card", class_="pcos-insight-title"),
+                        ui.p("Cycle trend suggests a likely ovulation window in 3 days.", class_="pcos-insight-sub"),
+                        class_="pcos-insight-card",
+                    ),
+                    class_="pcos-device",
+                ),
+                ui.div("Hormone trend +14%", class_="pcos-float-shot pcos-float-shot--a"),
+                ui.div("Predicted window: Day 16", class_="pcos-float-shot pcos-float-shot--b"),
+                class_="pcos-hero-visual",
+            ),
+            class_="pcos-hero",
+        ),
+        ui.div(
+            ui.div(
+                ui.p("NEW", class_="pcos-support-kicker"),
+                ui.p("Personalized cycle insights", class_="pcos-support-title"),
+                ui.p("Understand fluctuations with clear, evidence-oriented trend cards.", class_="pcos-support-copy"),
+                class_="pcos-support-card",
+            ),
+            ui.div(
+                ui.p("SCIENCE-BACKED", class_="pcos-support-kicker"),
+                ui.p("Built for hormone pattern clarity", class_="pcos-support-title"),
+                ui.p("Model outputs are presented in plain language for faster decision support.", class_="pcos-support-copy"),
+                class_="pcos-support-card",
+            ),
+            ui.div(
+                ui.p("CARE-FIRST", class_="pcos-support-kicker"),
+                ui.p("Confident next-step guidance", class_="pcos-support-title"),
+                ui.p("Actionable recommendations designed to feel calm, supportive, and practical.", class_="pcos-support-copy"),
+                class_="pcos-support-card",
+            ),
+            class_="pcos-support-grid",
+        ),
+        ui.div(
             ui.h1("PCOSense", class_="pcos-header-title"),
             ui.p(
                 "AI-powered PCOS screening \u2014 fill in what you know, get a personalized risk report backed by clinical evidence.",
@@ -1377,6 +1719,7 @@ app_ui = ui.page_sidebar(
             ui.output_ui("results_panel"),
             class_="pcos-main-inner",
         ),
+        class_="pcos-shell",
     ),
     title=None,
     window_title="PCOSense",

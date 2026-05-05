@@ -19,8 +19,14 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import shap
-import xgboost as xgb
+try:
+    import xgboost as xgb
+except ImportError:  # pragma: no cover - environment-specific optional dep
+    xgb = None
+try:
+    import shap
+except ImportError:  # pragma: no cover - environment-specific optional dep
+    shap = None
 
 warnings.filterwarnings("ignore")
 log = logging.getLogger(__name__)
@@ -88,12 +94,12 @@ class PCOSPredictor:
         self.metadata_path = Path(metadata_path)
         self.pkl_path      = Path(pkl_path)
 
-        self.model:         xgb.XGBClassifier | None = None
+        self.model:         Any                       = None
         self.metadata:      dict[str, Any]            = {}
         self.feature_names: list[str]                 = []
         self.scaler:        Any                       = None
         self.imputer:       Any                       = None
-        self.explainer:     shap.TreeExplainer | None = None
+        self.explainer:     Any                       = None
         self._fallback_medians: dict[str, float]      = {}
         self._fallback_means:   dict[str, float]      = {}
         self._fallback_stds:    dict[str, float]      = {}
@@ -109,6 +115,11 @@ class PCOSPredictor:
             raise FileNotFoundError(
                 f"Model not found at {self.model_path}. "
                 "Run notebooks/03_xgboost_training.ipynb first."
+            )
+        if xgb is None:
+            raise RuntimeError(
+                "xgboost is not installed. Install dependencies from requirements.txt "
+                "to enable predictions."
             )
 
         # XGBoost model
@@ -147,8 +158,14 @@ class PCOSPredictor:
                 "no imputation_medians. Predictions will be unreliable."
             )
 
-        # SHAP explainer
-        self.explainer = shap.TreeExplainer(self.model)
+        # SHAP explainer (optional in constrained deployment environments)
+        if shap is not None:
+            self.explainer = shap.TreeExplainer(self.model)
+        else:
+            self.explainer = None
+            log.warning(
+                "shap is not installed; continuing without feature-level explanations."
+            )
 
         self._loaded = True
         log.info(
@@ -264,14 +281,15 @@ class PCOSPredictor:
         threshold  = self.metadata.get("optimal_threshold", 0.5)
         predicted  = int(risk_score >= threshold)
 
-        # SHAP values (on scaled input, matching training)
-        shap_vals  = self.explainer.shap_values(X_scaled)[0]
-        shap_dict  = dict(zip(self.feature_names, shap_vals.tolist()))
-
-        # Top risk factors
-        top_factors = self._build_risk_factors(
-            shap_dict, X_imp.iloc[0].to_dict(), top_n
-        )
+        # SHAP values (optional; keep predictions available without shap)
+        shap_dict: dict[str, float] = {}
+        top_factors: list[RiskFactor] = []
+        if self.explainer is not None:
+            shap_vals  = self.explainer.shap_values(X_scaled)[0]
+            shap_dict  = dict(zip(self.feature_names, shap_vals.tolist()))
+            top_factors = self._build_risk_factors(
+                shap_dict, X_imp.iloc[0].to_dict(), top_n
+            )
 
         # Risk label
         if risk_score >= 0.70:

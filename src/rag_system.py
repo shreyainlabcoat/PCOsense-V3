@@ -17,7 +17,10 @@ _ROOT = str(Path(__file__).resolve().parent.parent)
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-import chromadb
+try:
+    import chromadb
+except ImportError:  # pragma: no cover - environment-specific optional dep
+    chromadb = None
 
 from src.ollama_client import OllamaClient
 
@@ -59,13 +62,18 @@ class RAGSystem:
         self.chroma_dir = Path(chroma_dir) if chroma_dir else _CHROMA_DIR
         self.collection_name = collection_name
         self.ollama = ollama or OllamaClient()
-        self._collection: chromadb.Collection | None = None
+        self._collection: Any = None
 
     # ── lazy collection handle ──────────────────────────────────────────────
 
     @property
-    def collection(self) -> chromadb.Collection:
+    def collection(self) -> Any:
         if self._collection is None:
+            if chromadb is None:
+                raise RuntimeError(
+                    "chromadb is not installed. Install dependencies from requirements.txt "
+                    "to enable local evidence retrieval."
+                )
             if not self.chroma_dir.exists():
                 raise FileNotFoundError(
                     f"Chroma database not found at {self.chroma_dir}.\n"

@@ -9,6 +9,7 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -22,15 +23,17 @@ if _ROOT not in sys.path:
 
 load_dotenv(_ROOT + "/.env")
 
-from src.agents import PCOSOrchestrator
 from src.api.schemas import PatientAssessmentRequest, patient_dict_from_request
 from src.database import SupabaseClient
 from src.quality_control import QualityController
+if TYPE_CHECKING:
+    from src.agents import PCOSOrchestrator
 
 log = logging.getLogger(__name__)
 
 _orchestrator: PCOSOrchestrator | None = None
 _qc: QualityController | None = None
+_startup_error: str | None = None
 
 
 def get_orchestrator() -> PCOSOrchestrator:
@@ -49,17 +52,27 @@ def get_qc() -> QualityController:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _orchestrator, _qc
+    global _orchestrator, _qc, _startup_error
     logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
     # Initialize heavy resources once at startup, not on first request
-    db = SupabaseClient()
-    _orchestrator = PCOSOrchestrator(db=db if db.is_configured() else None)
-    _qc = QualityController()
-    log.info("PCOSense pipeline initialized")
+    try:
+        from src.agents import PCOSOrchestrator
+
+        db = SupabaseClient()
+        _orchestrator = PCOSOrchestrator(db=db if db.is_configured() else None)
+        _qc = QualityController()
+        _startup_error = None
+        log.info("PCOSense pipeline initialized")
+    except Exception as exc:
+        _orchestrator = None
+        _qc = QualityController()
+        _startup_error = str(exc)
+        log.exception("PCOSense pipeline failed to initialize")
     yield
     _orchestrator = None
     _qc = None
+    _startup_error = None
 
 
 def _cors_origins() -> list[str]:
@@ -88,7 +101,30 @@ app.add_middleware(
 
 @app.get("/api/v1/health")
 def health() -> dict:
-    return {"status": "ok", "service": "pcosense-api"}
+    status = "ok" if _startup_error is None else "degraded"
+    return {"status": status, "service": "pcosense-api", "startup_error": _startup_error}
+
+
+@app.get("/api/v1/readiness")
+def readiness() -> dict:
+    """Operational readiness checks for deployments and demos."""
+    checks: dict[str, bool] = {
+        "startup_ok": _startup_error is None,
+        "orchestrator_initialized": _orchestrator is not None,
+    }
+    llm_available = False
+    if _orchestrator is not None:
+        try:
+            llm_available = _orchestrator.ollama.is_available()
+        except Exception:
+            llm_available = False
+    checks["llm_available"] = llm_available
+    checks["model_file_present"] = (Path(_ROOT) / "models" / "pcos_model.json").exists()
+    checks["metadata_file_present"] = (Path(_ROOT) / "models" / "model_metadata.json").exists()
+
+    failed = [name for name, ok in checks.items() if not ok]
+    status = "ready" if not failed else "degraded"
+    return {"status": status, "checks": checks, "failed_checks": failed}
 
 
 @app.post("/api/v1/assess")
@@ -107,6 +143,8 @@ def assess_patient(body: PatientAssessmentRequest) -> dict:
         )
 
     try:
+        if _startup_error:
+            raise RuntimeError(_startup_error)
         result = get_orchestrator().run(patient)
         
         # Generate quality control metrics
@@ -151,6 +189,9 @@ def quality_summary() -> dict:
 
 
 # ── Mount Shiny frontend so everything runs as a single service ──────────
-from src.app.app import app as shiny_app  # noqa: E402
-
-app.mount("/", shiny_app)
+try:
+    from src.app.app import app as shiny_app  # noqa: E402
+except Exception as exc:  # pragma: no cover - depends on optional UI deps
+    log.warning("Shiny app failed to import: %s", exc)
+else:
+    app.mount("/", shiny_app)

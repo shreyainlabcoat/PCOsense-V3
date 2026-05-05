@@ -26,6 +26,14 @@ from typing import Any
 log = logging.getLogger(__name__)
 
 
+def _get(d: dict[str, Any], *keys: str) -> Any:
+    """Return first present key from a dict."""
+    for k in keys:
+        if k in d:
+            return d[k]
+    return None
+
+
 class QCStatus(str, Enum):
     """Quality check result status."""
     PASS = "pass"
@@ -342,10 +350,14 @@ class QualityController:
 
         # Stage 3: RAG/Evidence validation
         rag_results = rag_results or {}
+        retrieved_papers = rag_results.get("retrieved_papers", [])
+        pubmed_papers = rag_results.get("pubmed_papers", [])
+        diagnostic_criteria = rag_results.get("diagnostic_criteria", [])
+        key_findings = rag_results.get("key_findings", [])
         rag_score, rag_flags = self.validate_rag_evidence(
-            retrieved_papers=len(rag_results.get("papers", [])),
-            evidence_chunks=len(rag_results.get("evidence_chunks", [])),
-            citations_count=rag_results.get("citation_count", 0),
+            retrieved_papers=len(retrieved_papers) + len(pubmed_papers),
+            evidence_chunks=len(diagnostic_criteria) + len(key_findings),
+            citations_count=len(retrieved_papers) + len(pubmed_papers),
         )
 
         # Compute overall (plausibility uses its own independent score)
@@ -364,7 +376,10 @@ class QualityController:
             "patient_bmi": _get(patient_data, "bmi", "BMI"),
             "risk_score_percentage": f"{prediction_result.get('risk_score', 0) * 100:.1f}%",
             "model_auroc": prediction_result.get("model_auroc", 0.9528),
-            "papers_used": len(rag_results.get("papers", [])),
+            "papers_used": len(retrieved_papers) + len(pubmed_papers),
+            "agentic_loop_used_fallback": bool(
+                (rag_results.get("agentic_loop") or {}).get("used_fallback_query", False)
+            ),
         }
 
         metrics = QCMetrics(
