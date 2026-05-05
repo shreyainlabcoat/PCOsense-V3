@@ -9,6 +9,7 @@ Provides:
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -17,9 +18,12 @@ _ROOT = str(Path(__file__).resolve().parent.parent)
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
+# Work around protobuf/runtime incompatibilities in some hosted environments.
+os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+
 try:
     import chromadb
-except ImportError:  # pragma: no cover - environment-specific optional dep
+except Exception:  # pragma: no cover - environment-specific optional dep
     chromadb = None
 
 from src.ollama_client import OllamaClient
