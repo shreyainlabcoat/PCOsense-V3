@@ -25,6 +25,7 @@ if str(_ROOT) not in sys.path:
 
 load_dotenv(_ROOT / ".env")
 from src.agents import PCOSOrchestrator
+from src.api.schemas import PatientAssessmentRequest, patient_dict_from_request
 from src.database import SupabaseClient
 from src.quality_control import QualityController
 
@@ -1857,9 +1858,15 @@ def server(input: Any, output: Any, session: Any) -> None:
         if orchestrator is None or qc is None:
             raise RuntimeError("Pipeline is unavailable.")
 
-        result = await asyncio.to_thread(orchestrator.run, payload)
+        try:
+            req = PatientAssessmentRequest(**payload)
+            model_payload = patient_dict_from_request(req)
+        except Exception as exc:
+            raise RuntimeError(f"Invalid input payload: {exc}") from exc
+
+        result = await asyncio.to_thread(orchestrator.run, model_payload)
         qc_metrics = qc.create_metrics_report(
-            patient_data=payload,
+            patient_data=model_payload,
             prediction_result=result.get("assessment", {}),
             rag_results=result.get("evidence", {}),
             validation_flags_from_agent=(result.get("validation", {}) or {}).get("flags", []),
