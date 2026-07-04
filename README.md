@@ -7,7 +7,7 @@
 ## Overview
 
 PCOSense is a full-stack clinical decision-support application that estimates PCOS risk from patient biomarkers. It combines:
-
+link: https://connect.systems-apps.com/content/8281cc9d-3bce-4792-be11-a58d7fc75b4e/
 - **XGBoost ML model** trained on 541 labeled patient records — **AUROC 0.9528**
 - **SHAP explainability** — shows which biomarkers drive each individual prediction
 - **Multi-agent AI system** — 3 specialised agents orchestrated sequentially
